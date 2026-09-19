@@ -1,0 +1,121 @@
+.auth-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #0f1419 0%, #1a1f3a 100%);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.auth-box {
+    background: #0f1419;
+    padding: 48px;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    width: 100%;
+    max-width: 420px;
+    border: 1px solid #222;
+}
+
+.auth-box h1 {
+    text-align: center;
+    color: #667eea;
+    margin-bottom: 12px;
+    font-size: 36px;
+}
+
+.auth-box > p {
+    text-align: center;
+    color: #999;
+    margin-bottom: 32px;
+    font-size: 14px;
+}
+
+.auth-box h2 {
+    margin-bottom: 20px;
+    font-size: 20px;
+    color: #fff;
+}
+
+.auth-box input {
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    border: 1px solid #333;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #1f2937;
+    color: #fff;
+    transition: border-color 0.2s;
+}
+
+.auth-box input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.auth-box input::placeholder {
+    color: #666;
+}
+
+.auth-box button {
+    width: 100%;
+    padding: 12px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    transition: background 0.3s;
+}
+
+.auth-box button:hover {
+    background: #5568d3;
+}
+
+.auth-box button:disabled {
+    background: #444;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.back-btn {
+    background: #333 !important;
+}
+
+.back-btn:hover {
+    background: #444 !important;
+}
+
+.error-message {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    border-left: 3px solid #ef4444;
+    font-size: 13px;
+}
+
+.switch-text {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 13px;
+    color: #999;
+}
+
+.switch-text a {
+    color: #667eea;
+    text-decoration: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+
+.switch-text a:hover {
+    color: #7d8ff7;
+}
