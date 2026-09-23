@@ -8,8 +8,6 @@ const authRoutes = require('./routes/auth');
 const messagesRoutes = require('./routes/messages');
 const pool = require('./database');
 
-const cors = require('cors');
-
 const app = express();
 
 // ONLY ONE CORS CONFIG - KEEP THIS:
