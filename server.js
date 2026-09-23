@@ -8,26 +8,31 @@ const authRoutes = require('./routes/auth');
 const messagesRoutes = require('./routes/messages');
 const pool = require('./database');
 
-const app = express();
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'http://localhost:3001');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    next();
-});
-const server = http.createServer(app);
-const io = socketIO(server, {
-    cors: {
-        origin: ['http://localhost:5173', 'http://localhost:8000', 'http://localhost:3000', 'http://localhost:3001'],
-        methods: ['GET', 'POST', 'PUT']
-    }
-});
+const cors = require('cors');
 
-// Middleware
-app.use(cors());
+const app = express();
+
+// ONLY ONE CORS CONFIG - KEEP THIS:
+app.use(cors({
+  origin: ['https://pchat-seven.vercel.app', 'http://localhost:3001'],
+  credentials: true
+}));
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// ... rest of middleware
+
+const server = http.createServer(app);
+
+// UPDATE SOCKET.IO CORS:
+const io = socketIO(server, {
+  cors: {
+    origin: ['https://pchat-seven.vercel.app', 'http://localhost:3001'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
+  }
+});
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messagesRoutes);
