@@ -109,6 +109,7 @@ router.post('/unblock/:userId', authMiddleware, async (req, res) => {
 // ===== SEND OTP =====
 router.post('/send-otp', async (req, res) => {
     try {
+        console.log('📧 Received OTP request for:', phone_or_email);
         const { phone_or_email } = req.body;
 
         if (!phone_or_email) {
@@ -131,7 +132,7 @@ router.post('/send-otp', async (req, res) => {
             subject: 'PChat Login OTP',
             html: `<h2>Your PChat OTP: <strong>${otp}</strong></h2><p>Valid for 10 minutes</p>`
         });
-
+        console.log('✅ Email sent successfully!');
         console.log(`📧 OTP sent to: ${phone_or_email}`);
         res.json({ success: true, message: 'OTP sent to email' });
     } catch (error) {
