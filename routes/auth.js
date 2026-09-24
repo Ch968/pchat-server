@@ -110,33 +110,19 @@ router.post('/unblock/:userId', authMiddleware, async (req, res) => {
 router.post('/send-otp', async (req, res) => {
     try {
         const { phone_or_email } = req.body;
-        console.log('📧 Received OTP request for:', phone_or_email);
-
-        if (!phone_or_email) {
-            return res.status(400).json({ error: 'Phone or email required' });
-        }
-
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-
-        // Store OTP in database
-        await pool.query(
-            'INSERT INTO otp_verifications (otp_code, expires_at) VALUES ($1, $2)',
-            [otp, expiresAt]
-        );
-
-        // Send email with OTP
-        await transporter.sendMail({
-            from: 'cnnaya500@gmail.com',
-            to: phone_or_email,
-            subject: 'PChat Login OTP',
-            html: `<h2>Your PChat OTP: <strong>${otp}</strong></h2><p>Valid for 10 minutes</p>`
+        
+        // TEST OTP - no email needed!
+        const otp = '123456';  // Simple test OTP
+        
+        console.log(`✅ OTP for ${phone_or_email}: ${otp}`);
+        
+        res.json({ 
+            success: true, 
+            message: 'Test OTP sent (check logs)',
+            otp: otp  // In production, remove this!
         });
-        console.log('✅ Email sent successfully!');
-        console.log(`📧 OTP sent to: ${phone_or_email}`);
-        res.json({ success: true, message: 'OTP sent to email' });
     } catch (error) {
-        console.error('Send OTP Error:', error);
+        console.error('Error:', error);
         res.status(500).json({ error: error.message });
     }
 });
