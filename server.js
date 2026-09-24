@@ -1,4 +1,5 @@
 // server/server.js - COMPLETE CORRECTED FILE
+require('./init-db');
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
