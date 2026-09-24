@@ -109,8 +109,8 @@ router.post('/unblock/:userId', authMiddleware, async (req, res) => {
 // ===== SEND OTP =====
 router.post('/send-otp', async (req, res) => {
     try {
-        console.log('📧 Received OTP request for:', phone_or_email);
         const { phone_or_email } = req.body;
+        console.log('📧 Received OTP request for:', phone_or_email);
 
         if (!phone_or_email) {
             return res.status(400).json({ error: 'Phone or email required' });
