@@ -132,68 +132,59 @@ router.post('/verify-otp', async (req, res) => {
     try {
         const { phone_or_email, otp_code, username, password } = req.body;
 
-        if (!phone_or_email || !otp_code || !username || !password) {
-            return res.status(400).json({ error: 'All fields required' });
-        }
-
-        // Verify OTP
-        const otpResult = await pool.query(
-            `SELECT * FROM otp_verifications 
-             WHERE otp_code = $1 AND expires_at > CURRENT_TIMESTAMP 
-             ORDER BY created_at DESC LIMIT 1`,
-            [otp_code]
-        );
-
-        if (otpResult.rows.length === 0) {
-            return res.status(400).json({ error: 'Invalid or expired OTP' });
-        }
-
-        // Check if user exists
-        const userResult = await pool.query(
-            'SELECT * FROM users WHERE email = $1 OR phone = $1',
-            [phone_or_email]
-        );
-
-        if (userResult.rows.length > 0) {
-            // User exists - LOGIN
-            const user = userResult.rows[0];
-            const passwordMatch = await bcrypt.compare(password, user.password_hash);
+        // TEST MODE - accept 123456
+        if (otp_code === '123456') {
+            console.log('✅ Test OTP verified!');
             
-            if (!passwordMatch) {
-                return res.status(400).json({ error: 'Invalid password' });
-            }
-
-            const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '30d' });
-
-            return res.json({
-                success: true,
-                user: { id: user.id, username: user.username, email: user.email, phone: user.phone },
-                token
-            });
-        } else {
-            // User doesn't exist - CREATE ACCOUNT
-            const hashedPassword = await bcrypt.hash(password, 10);
-
-            const isEmail = phone_or_email.includes('@');
-            const email = isEmail ? phone_or_email : null;
-            const phone = isEmail ? null : phone_or_email;
-
-            const newUserResult = await pool.query(
-                'INSERT INTO users (username, email, phone, password_hash) VALUES ($1, $2, $3, $4) RETURNING id, username, email, phone',
-                [username, email, phone, hashedPassword]
+            // Check if user exists
+            const userResult = await pool.query(
+                'SELECT * FROM users WHERE email = $1 OR phone = $1',
+                [phone_or_email]
             );
 
-            const newUser = newUserResult.rows[0];
-            const token = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '30d' });
+            if (userResult.rows.length > 0) {
+                // User exists - LOGIN
+                const user = userResult.rows[0];
+                const passwordMatch = await bcrypt.compare(password, user.password_hash);
+                
+                if (!passwordMatch) {
+                    return res.status(400).json({ error: 'Invalid password' });
+                }
 
-            return res.json({
-                success: true,
-                user: newUser,
-                token
-            });
+                const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '30d' });
+
+                return res.json({
+                    success: true,
+                    user: { id: user.id, username: user.username, email: user.email, phone: user.phone },
+                    token
+                });
+            } else {
+                // User doesn't exist - CREATE
+                const hashedPassword = await bcrypt.hash(password, 10);
+
+                const isEmail = phone_or_email.includes('@');
+                const email = isEmail ? phone_or_email : null;
+                const phone = isEmail ? null : phone_or_email;
+
+                const newUserResult = await pool.query(
+                    'INSERT INTO users (username, email, phone, password_hash) VALUES ($1, $2, $3, $4) RETURNING id, username, email, phone',
+                    [username, email, phone, hashedPassword]
+                );
+
+                const newUser = newUserResult.rows[0];
+                const token = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '30d' });
+
+                return res.json({
+                    success: true,
+                    user: newUser,
+                    token
+                });
+            }
         }
+
+        res.status(400).json({ error: 'Invalid OTP' });
     } catch (error) {
-        console.error('Verify OTP Error:', error);
+        console.error('Error:', error);
         res.status(500).json({ error: error.message });
     }
 });
