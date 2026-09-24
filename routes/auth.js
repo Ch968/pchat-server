@@ -112,27 +112,20 @@ router.post('/send-otp', async (req, res) => {
         const { phone_or_email } = req.body;
 
         if (!phone_or_email) {
-            return res.status(400).json({ error: 'Email or phone required' });
+            return res.status(400).json({ error: 'Email required' });
         }
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-        // Send OTP via email
-        const nodemailer = require('nodemailer');
-        
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.GMAIL_USER,
-                pass: process.env.GMAIL_PASSWORD
-            }
-        });
+        // Send via SendGrid
+        const sgMail = require('@sendgrid/mail');
+        sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-        await transporter.sendMail({
-            from: process.env.GMAIL_USER,
+        await sgMail.send({
             to: phone_or_email,
-            subject: 'PChat Login OTP',
+            from: 'cnnaya500@gmail.com',
+            subject: 'Your PChat OTP',
             html: `<h2>Your PChat OTP: <strong>${otp}</strong></h2><p>Valid for 10 minutes</p>`
         });
 
