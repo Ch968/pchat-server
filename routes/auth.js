@@ -110,19 +110,40 @@ router.post('/unblock/:userId', authMiddleware, async (req, res) => {
 router.post('/send-otp', async (req, res) => {
     try {
         const { phone_or_email } = req.body;
+
+        if (!phone_or_email) {
+            return res.status(400).json({ error: 'Email or phone required' });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+        // Send OTP via email
+        const nodemailer = require('nodemailer');
         
-        // TEST OTP - no email needed!
-        const otp = '123456';  // Simple test OTP
-        
-        console.log(`✅ OTP for ${phone_or_email}: ${otp}`);
-        
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.GMAIL_USER,
+                pass: process.env.GMAIL_PASSWORD
+            }
+        });
+
+        await transporter.sendMail({
+            from: process.env.GMAIL_USER,
+            to: phone_or_email,
+            subject: 'PChat Login OTP',
+            html: `<h2>Your PChat OTP: <strong>${otp}</strong></h2><p>Valid for 10 minutes</p>`
+        });
+
+        console.log(`✅ OTP sent to: ${phone_or_email}`);
+
         res.json({ 
             success: true, 
-            message: 'Test OTP sent (check logs)',
-            otp: otp  // In production, remove this!
+            message: 'OTP sent to your email'
         });
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Send OTP Error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -132,59 +153,64 @@ router.post('/verify-otp', async (req, res) => {
     try {
         const { phone_or_email, otp_code, username, password } = req.body;
 
-        // TEST MODE - accept 123456
-        if (otp_code === '123456') {
-            console.log('✅ Test OTP verified!');
-            
-            // Check if user exists
-            const userResult = await pool.query(
-                'SELECT * FROM users WHERE email = $1 OR phone = $1',
-                [phone_or_email]
-            );
+        // Check if OTP is correct
+        const otpResult = await pool.query(
+            `SELECT * FROM otp_verifications 
+             WHERE otp_code = $1 AND expires_at > CURRENT_TIMESTAMP 
+             ORDER BY created_at DESC LIMIT 1`,
+            [otp_code]
+        );
 
-            if (userResult.rows.length > 0) {
-                // User exists - LOGIN
-                const user = userResult.rows[0];
-                const passwordMatch = await bcrypt.compare(password, user.password_hash);
-                
-                if (!passwordMatch) {
-                    return res.status(400).json({ error: 'Invalid password' });
-                }
-
-                const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '30d' });
-
-                return res.json({
-                    success: true,
-                    user: { id: user.id, username: user.username, email: user.email, phone: user.phone },
-                    token
-                });
-            } else {
-                // User doesn't exist - CREATE
-                const hashedPassword = await bcrypt.hash(password, 10);
-
-                const isEmail = phone_or_email.includes('@');
-                const email = isEmail ? phone_or_email : null;
-                const phone = isEmail ? null : phone_or_email;
-
-                const newUserResult = await pool.query(
-                    'INSERT INTO users (username, email, phone, password_hash) VALUES ($1, $2, $3, $4) RETURNING id, username, email, phone',
-                    [username, email, phone, hashedPassword]
-                );
-
-                const newUser = newUserResult.rows[0];
-                const token = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '30d' });
-
-                return res.json({
-                    success: true,
-                    user: newUser,
-                    token
-                });
-            }
+        if (otpResult.rows.length === 0) {
+            return res.status(400).json({ error: 'Invalid or expired OTP' });
         }
 
-        res.status(400).json({ error: 'Invalid OTP' });
+        // Check if user exists
+        const userResult = await pool.query(
+            'SELECT * FROM users WHERE email = $1 OR phone = $1',
+            [phone_or_email]
+        );
+
+        if (userResult.rows.length > 0) {
+            // User exists - LOGIN
+            const user = userResult.rows[0];
+            const passwordMatch = await bcrypt.compare(password, user.password_hash);
+            
+            if (!passwordMatch) {
+                return res.status(400).json({ error: 'Invalid password' });
+            }
+
+            const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '30d' });
+
+            return res.json({
+                success: true,
+                user: { id: user.id, username: user.username, email: user.email, phone: user.phone },
+                token
+            });
+        } else {
+            // User doesn't exist - CREATE
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            const isEmail = phone_or_email.includes('@');
+            const email = isEmail ? phone_or_email : null;
+            const phone = isEmail ? null : phone_or_email;
+
+            const newUserResult = await pool.query(
+                'INSERT INTO users (username, email, phone, password_hash) VALUES ($1, $2, $3, $4) RETURNING id, username, email, phone',
+                [username, email, phone, hashedPassword]
+            );
+
+            const newUser = newUserResult.rows[0];
+            const token = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '30d' });
+
+            return res.json({
+                success: true,
+                user: newUser,
+                token
+            });
+        }
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Verify OTP Error:', error);
         res.status(500).json({ error: error.message });
     }
 });
