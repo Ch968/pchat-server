@@ -116,15 +116,20 @@ router.post('/send-otp', async (req, res) => {
         }
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-        // Send via SendGrid
-        const sgMail = require('@sendgrid/mail');
-        sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+        // Send via Mailgun
+        const mailgun = require('mailgun.js');
+        const FormData = require('form-data');
+        const mg = new mailgun(FormData);
 
-        await sgMail.send({
+        const client = mg.client({
+            username: 'api',
+            key: process.env.MAILGUN_API_KEY
+        });
+
+        await client.messages.create(process.env.MAILGUN_DOMAIN, {
+            from: `noreply@${process.env.MAILGUN_DOMAIN}`,
             to: phone_or_email,
-            from: 'cnnaya500@gmail.com',
             subject: 'Your PChat OTP',
             html: `<h2>Your PChat OTP: <strong>${otp}</strong></h2><p>Valid for 10 minutes</p>`
         });
