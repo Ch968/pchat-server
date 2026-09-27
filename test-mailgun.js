@@ -2,10 +2,17 @@ import FormData from "form-data"; // form-data v4.0.1
 import Mailgun from "mailgun.js"; // mailgun.js v11.1.0
 
 async function sendSimpleMessage() {
+  const apiKey = process.env.MAILGUN_API_KEY;
+  if (!apiKey) {
+    console.error("MAILGUN_API_KEY is not set in this process.");
+    process.exitCode = 1;
+    return;
+  }
+
   const mailgun = new Mailgun(FormData);
   const mg = mailgun.client({
     username: "api",
-    key: process.env.MAILGUN_API_KEY || "mg.fafcc20414a5d5017375fb3f332a071a",
+    key: apiKey,
     // When you have an EU-domain, you must specify the endpoint:
     // url: "https://api.eu.mailgun.net"
   });
