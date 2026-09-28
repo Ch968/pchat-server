@@ -107,46 +107,41 @@ router.post('/unblock/:userId', authMiddleware, async (req, res) => {
 });
 
 // ===== SEND OTP =====
-router.post('/send-otp', async (req, res) => {
+router.post('/send-verification', async (req, res) => {
     try {
-        const { phone_or_email } = req.body;
+        const { email } = req.body;
 
-        if (!phone_or_email) {
+        if (!email) {
             return res.status(400).json({ error: 'Email required' });
         }
 
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        // Generate random token
+        const crypto = require('crypto');
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-        // Mailgun setup
-        const mailgun = require('mailgun.js');
-        const FormData = require('form-data');
-        
-        const mg = new mailgun(FormData);
-        const client = mg.client({
-            username: 'api',
-            key: process.env.MAILGUN_API_KEY
-        });
+        // Store token in database
+        await pool.query(
+            `INSERT INTO verification_tokens (email, token, expires_at) 
+             VALUES ($1, $2, $3)
+             ON CONFLICT (email) DO UPDATE SET token = $2, expires_at = $3`,
+            [email, token, expiresAt]
+        );
 
-        // Send email
-        const messageData = {
-            from: `noreply@${process.env.MAILGUN_DOMAIN}`,
-            to: phone_or_email,
-            subject: 'Your PChat OTP',
-            html: `<h2>Your PChat OTP: <strong>${otp}</strong></h2><p>Valid for 10 minutes</p>`
-        };
+        // Create verification link
+        const verificationLink = `https://pchat-seven.vercel.app/verify?token=${token}`;
 
-        const result = await client.messages.create(process.env.MAILGUN_DOMAIN, messageData);
-        
-        console.log(`✅ OTP sent! Message ID: ${result.id}`);
+        console.log(`✅ Verification link: ${verificationLink}`);
 
+        // For testing: just return the link (no email sending needed!)
         res.json({ 
             success: true, 
-            message: 'OTP sent to your email'
+            message: 'Verification link created',
+            testLink: verificationLink // Remove this in production!
         });
 
     } catch (error) {
-        console.error('❌ Send OTP Error:', error.message);
-        console.error('Full error:', error);
+        console.error('Send Verification Error:', error);
         res.status(500).json({ error: error.message });
     }
 });
