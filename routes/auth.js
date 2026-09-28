@@ -147,68 +147,76 @@ router.post('/send-verification', async (req, res) => {
 });
 
 // ===== VERIFY OTP & CREATE/LOGIN =====
-router.post('/verify-otp', async (req, res) => {
+router.post('/verify-email', async (req, res) => {
     try {
-        const { phone_or_email, otp_code, username, password } = req.body;
+        const { token, username, password } = req.body;
 
-        // Check if OTP is correct
-        const otpResult = await pool.query(
-            `SELECT * FROM otp_verifications 
-             WHERE otp_code = $1 AND expires_at > CURRENT_TIMESTAMP 
-             ORDER BY created_at DESC LIMIT 1`,
-            [otp_code]
+        // Check if token exists and is valid
+        const tokenResult = await pool.query(
+            `SELECT * FROM verification_tokens 
+             WHERE token = $1 AND expires_at > CURRENT_TIMESTAMP AND verified = false`,
+            [token]
         );
 
-        if (otpResult.rows.length === 0) {
-            return res.status(400).json({ error: 'Invalid or expired OTP' });
+        if (tokenResult.rows.length === 0) {
+            return res.status(400).json({ error: 'Invalid or expired verification link' });
         }
+
+        const { email } = tokenResult.rows[0];
+
+        // Mark as verified
+        await pool.query(
+            `UPDATE verification_tokens SET verified = true WHERE token = $1`,
+            [token]
+        );
 
         // Check if user exists
         const userResult = await pool.query(
-            'SELECT * FROM users WHERE email = $1 OR phone = $1',
-            [phone_or_email]
+            'SELECT * FROM users WHERE email = $1',
+            [email]
         );
 
         if (userResult.rows.length > 0) {
             // User exists - LOGIN
             const user = userResult.rows[0];
+            const bcrypt = require('bcryptjs');
             const passwordMatch = await bcrypt.compare(password, user.password_hash);
             
             if (!passwordMatch) {
                 return res.status(400).json({ error: 'Invalid password' });
             }
 
-            const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '30d' });
+            const jwt = require('jsonwebtoken');
+            const token_jwt = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '30d' });
 
             return res.json({
                 success: true,
-                user: { id: user.id, username: user.username, email: user.email, phone: user.phone },
-                token
+                user: { id: user.id, username: user.username, email: user.email },
+                token: token_jwt
             });
         } else {
             // User doesn't exist - CREATE
+            const bcrypt = require('bcryptjs');
             const hashedPassword = await bcrypt.hash(password, 10);
 
-            const isEmail = phone_or_email.includes('@');
-            const email = isEmail ? phone_or_email : null;
-            const phone = isEmail ? null : phone_or_email;
-
             const newUserResult = await pool.query(
-                'INSERT INTO users (username, email, phone, password_hash) VALUES ($1, $2, $3, $4) RETURNING id, username, email, phone',
-                [username, email, phone, hashedPassword]
+                'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email',
+                [username, email, hashedPassword]
             );
 
             const newUser = newUserResult.rows[0];
-            const token = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '30d' });
+            const jwt = require('jsonwebtoken');
+            const token_jwt = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET || 'secret_key', { expiresIn: '30d' });
 
             return res.json({
                 success: true,
                 user: newUser,
-                token
+                token: token_jwt
             });
         }
+
     } catch (error) {
-        console.error('Verify OTP Error:', error);
+        console.error('Verify Email Error:', error);
         res.status(500).json({ error: error.message });
     }
 });
