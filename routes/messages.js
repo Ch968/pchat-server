@@ -49,46 +49,53 @@ router.get('/conversations/:conversationId/messages', authMiddleware, async (req
 });
 
 // ===== CREATE DIRECT MESSAGE =====
-router.post('/conversations/create-direct', authMiddleware, async (req, res) => {
+// Create or get direct message conversation
+router.post('/direct', async (req, res) => {
     try {
-        const { user_id } = req.body;
-        const currentUserId = req.userId;
+        const { userId } = req.body;
+        const currentUserId = req.user?.id || req.headers['user-id'];
 
-        if (currentUserId === user_id) {
-            return res.status(400).json({ error: 'Cannot message yourself' });
+        if (!userId || !currentUserId) {
+            return res.status(400).json({ error: 'User ID required' });
         }
 
+        // Check if conversation already exists
         const existing = await pool.query(
-            `SELECT c.id FROM conversations c
+            `SELECT c.* FROM conversations c
              JOIN conversation_members cm1 ON c.id = cm1.conversation_id
              JOIN conversation_members cm2 ON c.id = cm2.conversation_id
-             WHERE c.is_group = false 
-             AND cm1.user_id = $1 AND cm2.user_id = $2`,
-            [currentUserId, user_id]
+             WHERE c.type = 'direct' 
+             AND cm1.user_id = $1 
+             AND cm2.user_id = $2`,
+            [currentUserId, userId]
         );
 
         if (existing.rows.length > 0) {
-            const conv = await pool.query('SELECT * FROM conversations WHERE id = $1', [existing.rows[0].id]);
-            return res.json({ success: true, conversation: conv.rows[0] });
+            return res.json({ conversation: existing.rows[0] });
         }
 
-        const result = await pool.query(
-            'INSERT INTO conversations (is_group, name) VALUES (false, $1) RETURNING *',
-            [`${currentUserId}_${user_id}`]
+        // Create new conversation
+        const convResult = await pool.query(
+            `INSERT INTO conversations (type, name) 
+             VALUES ('direct', 'Direct Message') 
+             RETURNING *`
         );
 
-        const convId = result.rows[0].id;
+        const conversation = convResult.rows[0];
 
+        // Add members
         await pool.query(
-            'INSERT INTO conversation_members (conversation_id, user_id) VALUES ($1, $2), ($1, $3)',
-            [convId, currentUserId, user_id]
+            `INSERT INTO conversation_members (conversation_id, user_id) 
+             VALUES ($1, $2), ($1, $3)`,
+            [conversation.id, currentUserId, userId]
         );
 
-        res.json({ success: true, conversation: result.rows[0] });
+        res.json({ conversation });
     } catch (error) {
-        console.error(error);
+        console.error('Create direct message error:', error);
         res.status(500).json({ error: error.message });
     }
+});
 });
 
 // ===== CREATE GROUP =====
