@@ -181,7 +181,7 @@ router.get('/search/users', async (req, res) => {
         }
 
         const result = await pool.query(
-            `SELECT id, username, bio FROM users 
+            `SELECT id, username FROM users 
              WHERE username ILIKE $1 
              LIMIT 10`,
             [`%${query}%`]
