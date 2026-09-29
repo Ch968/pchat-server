@@ -171,22 +171,28 @@ router.put('/conversations/:conversationId/mark-read', authMiddleware, async (re
 });
 
 // ===== SEARCH USERS =====
-router.get('/search/users', authMiddleware, async (req, res) => {
+// Search users
+router.get('/search/users', async (req, res) => {
     try {
         const { query } = req.query;
 
+        if (!query || query.length < 2) {
+            return res.json({ users: [] });
+        }
+
         const result = await pool.query(
-            'SELECT id, username, email, bio, profile_photo_url FROM users WHERE username ILIKE $1 LIMIT 10',
+            `SELECT id, username, bio FROM users 
+             WHERE username ILIKE $1 
+             LIMIT 10`,
             [`%${query}%`]
         );
 
-        res.json({ success: true, users: result.rows });
+        res.json({ users: result.rows });
     } catch (error) {
-        console.error(error);
+        console.error('Search users error:', error);
         res.status(500).json({ error: error.message });
     }
 });
-
 // ===== ADD MESSAGE REACTION =====
 router.post('/messages/:messageId/react', authMiddleware, async (req, res) => {
     try {
