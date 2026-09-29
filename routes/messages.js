@@ -96,7 +96,7 @@ router.post('/direct', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-});
+
 
 // ===== CREATE GROUP =====
 router.post('/conversations/create-group', authMiddleware, async (req, res) => {
