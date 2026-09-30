@@ -52,7 +52,8 @@ router.get('/conversations/:conversationId/messages', authMiddleware, async (req
 // Create or get direct message conversation
 router.post('/conversations/create-direct', async (req, res) => {
     try {
-        const { user_id, currentUserId } = req.body;
+        const { user_id } = req.body;
+        const currentUserId = req.user?.id || req.headers['user-id'] || req.body.currentUserId;
 
         if (!user_id || !currentUserId) {
             return res.status(400).json({ error: 'User ID required' });
