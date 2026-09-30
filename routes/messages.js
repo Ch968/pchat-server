@@ -49,14 +49,20 @@ router.get('/conversations/:conversationId/messages', authMiddleware, async (req
 });
 
 // ===== CREATE DIRECT MESSAGE =====
-// Create or get direct message conversation
-router.post('/conversations/create-direct', async (req, res) => {
+/// Create or get direct message conversation
+router.post('/conversations/create-direct', authMiddleware, async (req, res) => {
     try {
         const { user_id } = req.body;
-        const currentUserId = req.user?.id || req.headers['user-id'] || req.body.currentUserId;
+        const currentUserId = req.user.id;  // From auth middleware!
+
+        console.log('Create direct - currentUserId:', currentUserId, 'user_id:', user_id);
 
         if (!user_id || !currentUserId) {
             return res.status(400).json({ error: 'User ID required' });
+        }
+
+        if (user_id === currentUserId) {
+            return res.status(400).json({ error: 'Cannot message yourself' });
         }
 
         // Check if conversation already exists
@@ -71,6 +77,7 @@ router.post('/conversations/create-direct', async (req, res) => {
         );
 
         if (existing.rows.length > 0) {
+            console.log('Conversation exists:', existing.rows[0].id);
             return res.json({ conversation: existing.rows[0] });
         }
 
@@ -90,13 +97,13 @@ router.post('/conversations/create-direct', async (req, res) => {
             [conversation.id, currentUserId, user_id]
         );
 
+        console.log('Created new conversation:', conversation.id);
         res.json({ conversation });
     } catch (error) {
         console.error('Create direct message error:', error);
         res.status(500).json({ error: error.message });
     }
 });
-
 
 // ===== CREATE GROUP =====
 router.post('/conversations/create-group', authMiddleware, async (req, res) => {
