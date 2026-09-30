@@ -50,12 +50,12 @@ router.get('/conversations/:conversationId/messages', authMiddleware, async (req
 
 // ===== CREATE DIRECT MESSAGE =====
 // Create or get direct message conversation
-router.post('/direct', async (req, res) => {
+router.post('/conversations/create-direct', async (req, res) => {
     try {
-        const { userId } = req.body;
-        const currentUserId = req.user?.id || req.headers['user-id'];
+        const { user_id } = req.body;
+        const currentUserId = req.user?.id || req.headers['user-id'] || req.body.currentUserId;
 
-        if (!userId || !currentUserId) {
+        if (!user_id || !currentUserId) {
             return res.status(400).json({ error: 'User ID required' });
         }
 
@@ -67,7 +67,7 @@ router.post('/direct', async (req, res) => {
              WHERE c.type = 'direct' 
              AND cm1.user_id = $1 
              AND cm2.user_id = $2`,
-            [currentUserId, userId]
+            [currentUserId, user_id]
         );
 
         if (existing.rows.length > 0) {
@@ -87,7 +87,7 @@ router.post('/direct', async (req, res) => {
         await pool.query(
             `INSERT INTO conversation_members (conversation_id, user_id) 
              VALUES ($1, $2), ($1, $3)`,
-            [conversation.id, currentUserId, userId]
+            [conversation.id, currentUserId, user_id]
         );
 
         res.json({ conversation });
