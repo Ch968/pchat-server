@@ -60,9 +60,10 @@ export const messagesAPI = {
             params: { limit, offset } 
         }),
     
-    createDirectMessage: (user_id) =>
-        API.post('/messages/conversations/create-direct', { user_id }),
-    
+  createDirectMessage: (user_id, currentUserId) =>
+    API.post('/messages/conversations/create-direct', { user_id, currentUserId }),
+
+
     createGroup: (name, member_ids, group_photo_url, description) =>
         API.post('/messages/conversations/create-group', { 
             name, 
