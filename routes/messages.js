@@ -51,9 +51,8 @@ router.get('/conversations/:conversationId/messages', authMiddleware, async (req
 // ===== CREATE DIRECT MESSAGE =====
 /// Create or get direct message conversation
 router.post('/conversations/create-direct', authMiddleware, async (req, res) => {
-    try {
-        const { user_id } = req.body;
-        const currentUserId = req.user.id;  // From auth middleware!
+    const currentUserId = req.userId;  // ✅ CORRECT!
+    const { user_id } = req.body;
 
         console.log('Create direct - currentUserId:', currentUserId, 'user_id:', user_id);
 
